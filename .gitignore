@@ -139,3 +139,9 @@ PROJECT.md
 .env.local
 oxc-custom-build/
 *.code-workspace
+
+# Ops
+*.local
+ops/tmp/
+*.pem
+*.key
