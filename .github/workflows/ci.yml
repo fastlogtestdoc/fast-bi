@@ -35,9 +35,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install lint dependencies
-        run: pip install pre-commit
+        run: pip install pre-commit ruff
 
-      - name: Run pre-commit (ruff, yaml, trailing-whitespace)
+      - name: Run pre-commit (Python & general checks)
+        env:
+          # Skip frontend/docs/helm hooks — they need npm, yarn, brew and
+          # are already covered by the upstream pre-commit.yml workflow.
+          SKIP: prettier-frontend,oxlint-frontend,custom-rules-frontend,eslint-docs,type-checking-frontend,helm-docs
         run: pre-commit run --all-files --show-diff-on-failure
 
   # -----------------------------------------------------------------------
