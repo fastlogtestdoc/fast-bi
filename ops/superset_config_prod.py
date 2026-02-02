@@ -246,8 +246,8 @@ if AUTH_TYPE == AUTH_OAUTH:
         """Extract user info and group memberships from the OIDC token."""
 
         def oauth_user_info(
-            self, provider: str, response: dict | None = None
-        ) -> dict:
+            self, provider: str, response: dict[str, Any] | None = None
+        ) -> dict[str, Any]:
             if provider != "oidc":
                 return {}
             me = self.appbuilder.sm.oauth_remotes[provider].get("userinfo")
