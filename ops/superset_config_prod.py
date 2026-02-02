@@ -5,13 +5,14 @@ Loaded via SUPERSET_CONFIG_PATH environment variable.
 All secrets are read from environment variables — no defaults for sensitive values.
 """
 
-import json
 import logging
 import logging.config
 import os
 from typing import Any
 
 from celery.schedules import crontab
+
+from superset.utils import json
 
 # ---------------------------------------------------------------------------
 # Secret key — required, no fallback
@@ -88,6 +89,7 @@ CACHE_CONFIG = {
 DATA_CACHE_CONFIG = CACHE_CONFIG
 FILTER_STATE_CACHE_CONFIG = CACHE_CONFIG
 EXPLORE_FORM_DATA_CACHE_CONFIG = CACHE_CONFIG
+
 
 # ---------------------------------------------------------------------------
 # Celery (broker + result backend via Redis)
@@ -206,9 +208,7 @@ if AUTH_TYPE == AUTH_OAUTH:
                 "client_id": OIDC_CLIENT_ID,
                 "client_secret": OIDC_CLIENT_SECRET,
                 "server_metadata_url": OIDC_DISCOVERY_URL,
-                "api_base_url": OIDC_DISCOVERY_URL.rsplit(
-                    "/.well-known", 1
-                )[0] + "/",
+                "api_base_url": OIDC_DISCOVERY_URL.rsplit("/.well-known", 1)[0] + "/",
                 "client_kwargs": {"scope": " ".join(OIDC_SCOPES)},
                 "redirect_uri": OIDC_REDIRECT_URI,
             },
