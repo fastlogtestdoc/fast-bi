@@ -15,6 +15,7 @@ x-superset-env: &superset-env
 
 x-superset-volumes: &superset-volumes
   - ./docker:/app/docker
+  - ./ops/superset_config_prod.py:/app/superset_config_prod.py:ro
   - superset_home:/app/superset_home
 
 x-superset-depends: &superset-depends
@@ -66,6 +67,7 @@ services:
     command: ["/app/docker/docker-init.sh"]
     <<: *superset-env
     environment:
+      SUPERSET_CONFIG_PATH: /app/superset_config_prod.py
       DATABASE_DIALECT: postgresql
       DATABASE_USER: ${POSTGRES_USER:-superset}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -98,6 +100,7 @@ services:
     command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
     <<: *superset-env
     environment:
+      SUPERSET_CONFIG_PATH: /app/superset_config_prod.py
       DATABASE_DIALECT: postgresql
       DATABASE_USER: ${POSTGRES_USER:-superset}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -132,6 +135,7 @@ services:
     command: ["/app/docker/docker-bootstrap.sh", "worker"]
     <<: *superset-env
     environment:
+      SUPERSET_CONFIG_PATH: /app/superset_config_prod.py
       DATABASE_DIALECT: postgresql
       DATABASE_USER: ${POSTGRES_USER:-superset}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -164,6 +168,7 @@ services:
     command: ["/app/docker/docker-bootstrap.sh", "beat"]
     <<: *superset-env
     environment:
+      SUPERSET_CONFIG_PATH: /app/superset_config_prod.py
       DATABASE_DIALECT: postgresql
       DATABASE_USER: ${POSTGRES_USER:-superset}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
