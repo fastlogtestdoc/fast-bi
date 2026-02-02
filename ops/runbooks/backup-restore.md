@@ -4,7 +4,12 @@ Covers full database backup via `pg_dump`, restore procedure, and consistency
 considerations.
 
 All commands assume you are in the repository root with the production stack
-running.
+running. Commands reference `${POSTGRES_USER}` and `${POSTGRES_DB}` — source
+them from your `.env` before running:
+
+```bash
+source .env
+```
 
 ---
 
@@ -14,8 +19,8 @@ running.
 
 ```bash
 docker compose -f docker-compose.prod.yml exec postgres \
-  pg_dump -U superset -d superset -Fc -Z6 \
-  > "backup_superset_$(date +%Y%m%d_%H%M%S).dump"
+  pg_dump -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Fc -Z6 \
+  > "backup_${POSTGRES_DB}_$(date +%Y%m%d_%H%M%S).dump"
 ```
 
 | Flag | Purpose |
@@ -27,8 +32,8 @@ docker compose -f docker-compose.prod.yml exec postgres \
 
 ```bash
 docker compose -f docker-compose.prod.yml exec postgres \
-  pg_dump -U superset -d superset --clean --if-exists \
-  > "backup_superset_$(date +%Y%m%d_%H%M%S).sql"
+  pg_dump -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" --clean --if-exists \
+  > "backup_${POSTGRES_DB}_$(date +%Y%m%d_%H%M%S).sql"
 ```
 
 ### Verify backup file
@@ -47,7 +52,7 @@ head -30 backup_superset_*.sql
 For automated daily backups, add a cron job on the Docker host:
 
 ```bash
-0 3 * * * cd /path/to/repo && docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U superset -d superset -Fc -Z6 > /backups/superset_$(date +\%Y\%m\%d).dump 2>&1
+0 3 * * * cd /path/to/repo && source .env && docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Fc -Z6 > /backups/${POSTGRES_DB}_$(date +\%Y\%m\%d).dump 2>&1
 ```
 
 ---
@@ -68,23 +73,23 @@ docker compose -f docker-compose.prod.yml stop \
 
 # 2. Drop and recreate the target database
 docker compose -f docker-compose.prod.yml exec postgres \
-  psql -U superset -d postgres -c "DROP DATABASE IF EXISTS superset;"
+  psql -U "${POSTGRES_USER}" -d postgres -c "DROP DATABASE IF EXISTS ${POSTGRES_DB};"
 docker compose -f docker-compose.prod.yml exec postgres \
-  psql -U superset -d postgres -c "CREATE DATABASE superset OWNER superset;"
+  psql -U "${POSTGRES_USER}" -d postgres -c "CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER};"
 
 # 3a. Restore from custom-format dump
 docker compose -f docker-compose.prod.yml exec -T postgres \
-  pg_restore -U superset -d superset --no-owner --role=superset \
-  < backup_superset_20250101_030000.dump
+  pg_restore -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" --no-owner --role="${POSTGRES_USER}" \
+  < backup_${POSTGRES_DB}_20250101_030000.dump
 
 # 3b. OR restore from plain-SQL dump
 docker compose -f docker-compose.prod.yml exec -T postgres \
-  psql -U superset -d superset \
-  < backup_superset_20250101_030000.sql
+  psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
+  < backup_${POSTGRES_DB}_20250101_030000.sql
 
 # 4. Verify data
 docker compose -f docker-compose.prod.yml exec postgres \
-  psql -U superset -d superset -c "SELECT count(*) FROM ab_user;"
+  psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "SELECT count(*) FROM ab_user;"
 
 # 5. Restart Superset services
 docker compose -f docker-compose.prod.yml up -d
@@ -95,18 +100,18 @@ docker compose -f docker-compose.prod.yml up -d
 ```bash
 # Create a test database
 docker compose -f docker-compose.prod.yml exec postgres \
-  psql -U superset -d postgres -c "CREATE DATABASE superset_restore_test OWNER superset;"
+  psql -U "${POSTGRES_USER}" -d postgres -c "CREATE DATABASE ${POSTGRES_DB}_restore_test OWNER ${POSTGRES_USER};"
 
 # Restore into it
 docker compose -f docker-compose.prod.yml exec -T postgres \
-  pg_restore -U superset -d superset_restore_test --no-owner --role=superset \
-  < backup_superset_20250101_030000.dump
+  pg_restore -U "${POSTGRES_USER}" -d "${POSTGRES_DB}_restore_test" --no-owner --role="${POSTGRES_USER}" \
+  < backup_${POSTGRES_DB}_20250101_030000.dump
 
 # Verify, then drop when done
 docker compose -f docker-compose.prod.yml exec postgres \
-  psql -U superset -d superset_restore_test -c "SELECT count(*) FROM ab_user;"
+  psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}_restore_test" -c "SELECT count(*) FROM ab_user;"
 docker compose -f docker-compose.prod.yml exec postgres \
-  psql -U superset -d postgres -c "DROP DATABASE superset_restore_test;"
+  psql -U "${POSTGRES_USER}" -d postgres -c "DROP DATABASE ${POSTGRES_DB}_restore_test;"
 ```
 
 ---

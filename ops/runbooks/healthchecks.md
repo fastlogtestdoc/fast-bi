@@ -11,8 +11,8 @@ All commands assume you are in the repository root.
 
 | Service | Method | Target | Interval | Healthy response |
 |---|---|---|---|---|
-| nginx | HTTP GET | `localhost:80/health` | 30 s | HTTP 200 |
-| superset-web | HTTP GET | `localhost:8088/health` | 30 s | HTTP 200, `"OK"` |
+| nginx | HTTP GET | `localhost:8080/health` (host) | 30 s | HTTP 200 |
+| superset-web | HTTP GET | `localhost:8088/health` (container-internal) | 30 s | HTTP 200, `"OK"` |
 | postgres | CLI | `pg_isready` | 10 s | exit 0, "accepting connections" |
 | redis | CLI | `redis-cli ping` | 10 s | `PONG` |
 | superset-worker | CLI | `celery inspect ping` | 30 s | `{"ok": "pong"}` |
@@ -23,6 +23,8 @@ All commands assume you are in the repository root.
 ## Manual Checks
 
 ### Nginx (reverse proxy)
+
+The primary external health check goes through nginx on **host port 8080**:
 
 ```bash
 curl -sf http://localhost:8080/health
@@ -38,9 +40,13 @@ docker compose -f docker-compose.prod.yml logs --tail 20 nginx
 
 ### Superset Web (Gunicorn)
 
+superset-web is **not exposed to the host** — port 8088 is only reachable
+inside the Docker network. Use `docker compose exec` to run the check
+container-internally:
+
 ```bash
 docker compose -f docker-compose.prod.yml exec superset-web \
-  curl -sf http://localhost:8088/health
+  curl -f http://localhost:8088/health
 # Expected: HTTP 200, body "OK"
 ```
 
