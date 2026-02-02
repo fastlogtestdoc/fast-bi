@@ -8,7 +8,7 @@ running. Commands reference `${POSTGRES_USER}` and `${POSTGRES_DB}` — source
 them from your `.env` before running:
 
 ```bash
-source .env
+set -a; source .env; set +a
 ```
 
 ---
@@ -52,7 +52,7 @@ head -30 backup_superset_*.sql
 For automated daily backups, add a cron job on the Docker host:
 
 ```bash
-0 3 * * * cd /path/to/repo && source .env && docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Fc -Z6 > /backups/${POSTGRES_DB}_$(date +\%Y\%m\%d).dump 2>&1
+0 3 * * * cd /path/to/repo && set -a && source .env && set +a && docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Fc -Z6 > /backups/${POSTGRES_DB}_$(date +\%Y\%m\%d).dump 2>&1
 ```
 
 ---

@@ -11,8 +11,8 @@ All commands assume you are in the repository root.
 
 | Service | Method | Target | Interval | Healthy response |
 |---|---|---|---|---|
-| nginx | HTTP GET | `localhost:8080/health` (host) | 30 s | HTTP 200 |
-| superset-web | HTTP GET | `localhost:8088/health` (container-internal) | 30 s | HTTP 200, `"OK"` |
+| nginx | HTTP GET | `http://localhost:8080/health` (host) | 30 s | HTTP 200 |
+| superset-web | HTTP GET | `http://localhost:8088/health` (container-internal) | 30 s | HTTP 200, `"OK"` |
 | postgres | CLI | `pg_isready` | 10 s | exit 0, "accepting connections" |
 | redis | CLI | `redis-cli ping` | 10 s | `PONG` |
 | superset-worker | CLI | `celery inspect ping` | 30 s | `{"ok": "pong"}` |
@@ -47,8 +47,9 @@ container-internally:
 ```bash
 docker compose -f docker-compose.prod.yml exec superset-web \
   curl -f http://localhost:8088/health
-# Expected: HTTP 200, body "OK"
 ```
+
+Expected: HTTP 200, body `"OK"`.
 
 Container-level healthcheck status:
 
