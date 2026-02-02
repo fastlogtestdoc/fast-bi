@@ -180,3 +180,92 @@ FEATURE_FLAGS = {
 }
 
 SQLLAB_CTAS_NO_LIMIT = True
+
+# ---------------------------------------------------------------------------
+# Authentication — DB (default) or OIDC/OAuth, controlled via AUTH_TYPE env var
+# ---------------------------------------------------------------------------
+from flask_appbuilder.const import AUTH_DB, AUTH_OAUTH  # noqa: E402
+
+_AUTH_TYPE_MAP = {
+    "DB": AUTH_DB,
+    "OAUTH": AUTH_OAUTH,
+}
+AUTH_TYPE = _AUTH_TYPE_MAP.get(os.getenv("AUTH_TYPE", "DB").upper(), AUTH_DB)
+
+if AUTH_TYPE == AUTH_OAUTH:
+    OIDC_CLIENT_ID = os.environ["OIDC_CLIENT_ID"]
+    OIDC_CLIENT_SECRET = os.environ["OIDC_CLIENT_SECRET"]
+    OIDC_DISCOVERY_URL = os.environ["OIDC_DISCOVERY_URL"]
+    OIDC_SCOPES = os.getenv("OIDC_SCOPES", "openid email profile").split()
+    OIDC_REDIRECT_URI = os.getenv(
+        "OIDC_REDIRECT_URI",
+        "http://localhost:8080/oauth-authorized/oidc",
+    )
+    OIDC_USERNAME_CLAIM = os.getenv("OIDC_USERNAME_CLAIM", "preferred_username")
+    OIDC_EMAIL_CLAIM = os.getenv("OIDC_EMAIL_CLAIM", "email")
+    OIDC_GROUPS_CLAIM = os.getenv("OIDC_GROUPS_CLAIM", "groups")
+
+    OAUTH_PROVIDERS = [
+        {
+            "name": "oidc",
+            "icon": "fa-openid",
+            "token_key": "access_token",
+            "remote_app": {
+                "client_id": OIDC_CLIENT_ID,
+                "client_secret": OIDC_CLIENT_SECRET,
+                "server_metadata_url": OIDC_DISCOVERY_URL,
+                "api_base_url": OIDC_DISCOVERY_URL.rsplit(
+                    "/.well-known", 1
+                )[0] + "/",
+                "client_kwargs": {"scope": " ".join(OIDC_SCOPES)},
+                "redirect_uri": OIDC_REDIRECT_URI,
+            },
+        },
+    ]
+
+    # Allow auto-creation of users on first OIDC login
+    AUTH_USER_REGISTRATION = True
+    AUTH_USER_REGISTRATION_ROLE = "BI_Viewer"
+
+    # -- Group → Role mapping --------------------------------------------------
+    # Keys: group names from the IdP groups claim
+    # Values: Superset role names (must exist in Superset)
+    AUTH_ROLES_MAPPING = json.loads(
+        os.getenv(
+            "OIDC_ROLES_MAPPING",
+            json.dumps(
+                {
+                    "superset-admins": ["Admin"],
+                    "superset-bi-admins": ["BI_Admin"],
+                    "superset-editors": ["BI_Editor"],
+                    "superset-viewers": ["BI_Viewer"],
+                }
+            ),
+        )
+    )
+    AUTH_ROLES_SYNC_AT_LOGIN = True
+
+    # -- Custom security manager for OIDC userinfo ----------------------------
+    from superset.security.manager import (  # noqa: E402
+        SupersetSecurityManager,
+    )
+
+    class OIDCSecurityManager(SupersetSecurityManager):
+        """Extract user info and group memberships from the OIDC token."""
+
+        def oauth_user_info(
+            self, provider: str, response: dict | None = None
+        ) -> dict:
+            if provider != "oidc":
+                return {}
+            me = self.appbuilder.sm.oauth_remotes[provider].get("userinfo")
+            data = me.json() if me else {}
+            return {
+                "username": data.get(OIDC_USERNAME_CLAIM, ""),
+                "email": data.get(OIDC_EMAIL_CLAIM, ""),
+                "first_name": data.get("given_name", ""),
+                "last_name": data.get("family_name", ""),
+                "role_keys": data.get(OIDC_GROUPS_CLAIM, []),
+            }
+
+    CUSTOM_SECURITY_MANAGER = OIDCSecurityManager
