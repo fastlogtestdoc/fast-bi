@@ -7,7 +7,9 @@ All secrets are read from environment variables — no defaults for sensitive va
 
 import json
 import logging
+import logging.config
 import os
+from typing import Any
 
 from celery.schedules import crontab
 
@@ -139,7 +141,7 @@ class JsonFormatter(logging.Formatter):
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
 LOGGING_CONFIGURATOR = None  # use LOG_FORMAT / custom setup below
 
-CUSTOM_LOGGING_CONFIG: dict = {
+CUSTOM_LOGGING_CONFIG: dict[str, Any] = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
@@ -160,17 +162,7 @@ CUSTOM_LOGGING_CONFIG: dict = {
     },
 }
 
-LOGGING_CONFIG_CLASS = "superset.utils.logging_configurator.LoggingConfigurator"
-
-# Override the Flask/Superset default with our custom dict
-import superset.utils.log as _superset_log  # noqa: E402
-
-_superset_log.LOGGING_CONFIGURATOR = None
-
-# Apply the dict-config directly — Superset merges this if present
-import logging.config as _lc  # noqa: E402
-
-_lc.dictConfig(CUSTOM_LOGGING_CONFIG)
+logging.config.dictConfig(CUSTOM_LOGGING_CONFIG)
 
 # ---------------------------------------------------------------------------
 # Feature flags
