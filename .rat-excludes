@@ -84,6 +84,10 @@ erd.puml
 erd.svg
 intro_header.txt
 
+# ops configuration and runbooks
+ops/*
+.env.example
+
 # for LLMs
 llm-context.md
 llms.txt
